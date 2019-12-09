@@ -1,0 +1,21 @@
+# To run the tasks with any other user with sudo privileges
+# ansible_user: ansible
+# ansible_become_pass: 'admin'
+
+ansible_become: true
+
+# User Name from where ansible is running
+ansible_control_node_user: admin
+
+# Choose from cdh or hdp
+distribution_type: cdh
+
+# Choose from mysql, postgres or embedded
+database_type: mysql
+mysql_root_password: admin
+
+# cdh distribution version configuaration
+cm_version: 6.3.1
+
+# CM Server Hostname
+cm_server_hostname: dl00.icds.com

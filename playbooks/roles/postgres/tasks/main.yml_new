@@ -1,0 +1,57 @@
+---
+- name: Ensure bash, OpenSSl, and libssl are the latest versions
+  apt: name={{ item }} update_cache=true state=latest
+  with_items:
+    - bash
+    - openssl
+    - libssl-dev
+    - libssl-doc
+  tags: packages
+
+- name: Install PostgreSQL
+  apt: name={{ item }} update_cache=true state=present
+  with_items:
+    - postgresql
+    - postgresql-contrib
+    - libpq-dev
+    - python-psycopg2
+  tags: packages
+
+- name: Ensure the PostgreSQL service is running
+  service: name=postgresql state=started enabled=yes
+
+- name: Add new configuration
+  blockinfile:
+    dest: /etc/postgresql/10/main/pg_hba.conf
+    block: |
+     local    all        all       trust 
+    state: present
+
+
+- name: Ensure database is created
+  sudo_user: postgres
+  postgresql_db: name={{ db_name }}
+             state=present
+
+
+- name: Create postrgres db user, set password and grant privs
+  postgresql_user:
+    name={{ item.value.user }}
+    password={{ item.value.pass }}
+    role_attr_flags=CREATEDB,NOSUPERUSER,INHERIT,NOCREATEROLE
+    login_user=postgres
+  with_dict: "{{ databases }}"
+  become: true
+  become_user: postgres
+
+- name: Create postgreSQL Db
+  postgresql_db:
+    name={{ item.value.name }}
+    encoding={{ db_postgres_encoding }}
+    lc_collate={{ db_postgres_LC_COLLATE }}
+    lc_ctype={{ db_postgres_LC_CTYPE }}
+    owner={{ item.value.user }}
+    state=present
+  with_dict: "{{ databases }}"
+  become: true
+  become_user: postgres

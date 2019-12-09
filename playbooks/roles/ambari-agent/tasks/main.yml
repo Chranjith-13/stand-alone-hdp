@@ -1,0 +1,29 @@
+---
+ 
+- name: Install ambari-agent
+  become: true
+  apt:
+    name: ambari-agent
+    state: present
+    update_cache: true
+
+#- name: Set the Ambari Server in the agent configuration
+#  lineinfile:
+#    path: /etc/ambari-agent/conf/ambari-agent.ini
+#    regexp: "^hostname="
+#    line: "hostname={{ hostvars[groups['ambari-server']|first]['ansible_fqdn'] }}"
+#    state: present
+#  notify: Restart ambari-agent
+
+- meta: flush_handlers
+
+- name: Make sure the ambari-agent service is started
+  service:
+    name: ambari-agent
+    state: started
+
+- name: Make sure the ambari-agent service is enabled
+  service:
+    name: ambari-agent
+    enabled: yes
+  ignore_errors: true

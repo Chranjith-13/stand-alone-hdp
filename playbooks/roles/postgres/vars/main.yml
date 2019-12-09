@@ -1,0 +1,7 @@
+---
+db_user: dimagi
+db_name: dimagi_postgres
+db_password: dimagi@admin!fi&&ion
+db_postgres_encoding: 'UTF8'
+db_postgres_tablespace: 'pg_default'
+db_postgres_LC_COLLATE: 'en_US.UTF-8'

@@ -1,0 +1,34 @@
+
+---
+
+- name: Load variables
+  include_vars: "{{ item }}"
+  with_first_found:
+    - files: 
+        - ubuntu-18.04.yml
+        - defaults.yml
+
+- name: Install ambari-server
+  become: true
+  apt:
+    name: ambari-server
+    state: present
+    update_cache: true
+
+
+
+- name: Configure the Ambari JDBC driver for mysql (for hive embedded)
+  shell: /usr/sbin/ambari-server setup --jdbc-db=mysql --jdbc-driver={{ mysql_jdbc_location }}
+  notify: Restart ambari-server
+
+- name: Make sure the ambari-server service is started
+  service:
+    name: ambari-server
+    state: started
+
+- name: Make sure the ambari-server service is enabled
+  service:
+    name: ambari-server
+    enabled: yes
+  ignore_errors: true
+

@@ -1,0 +1,54 @@
+---
+
+- name: Load variables
+  include_vars: "{{ item }}"
+  with_first_found:
+    - files: 
+        - ubuntu-18.04.yml
+        - defaults.yml
+      paths:
+        - ../ambari-server/vars
+
+- name: Install ambari-server
+  become: true
+  apt:
+    name: ambari-server
+    state: present
+    update_cache: true
+
+
+- meta: flush_handlers
+
+- block:
+   - block:
+        - name: Install mysql-server
+          apt:
+            name: 'mysql-server'
+            update_cache: yes
+            state: present
+
+        - name: Configure mysql to listen on all interfaces
+          ini_file:
+            path: '/etc/mysql/mysql.conf.d/mysqld.cnf'
+            create: no
+            section: 'mysqld'
+            option: 'bind-address'
+            value: '*'
+            no_extra_spaces: yes
+            state: present
+
+   - name: Configure the Ambari JDBC driver for mysql (for hive embedded)
+     shell: /usr/sbin/ambari-server setup --jdbc-db=mysql --jdbc-driver={{ mysql_jdbc_location }}
+     notify: Restart ambari-server
+
+- name: Make sure the ambari-server service is started
+  service:
+    name: ambari-server
+    state: started
+
+- name: Make sure the ambari-server service is enabled
+  service:
+    name: ambari-server
+    enabled: yes
+  ignore_errors: true
+

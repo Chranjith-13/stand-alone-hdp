@@ -1,0 +1,9 @@
+---
+#- import_playbook: "set_variables.yml"
+
+- name: Install postgres Database
+  hosts: localhost
+  any_errors_fatal: true
+  become: yes
+  roles:
+    - postgres

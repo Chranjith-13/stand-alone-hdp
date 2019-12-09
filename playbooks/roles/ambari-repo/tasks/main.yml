@@ -1,0 +1,21 @@
+---
+- name: Add Hortonworks APT key
+  become: true
+  apt_key:
+    id: B9733A7A07513CAD
+    keyserver: keyserver.ubuntu.com
+
+- name: Remove previous repository
+  become: true
+  file: path=/etc/apt/sources.list.d/ambari.list state=absent
+
+- name: Add Ambari repository
+  get_url:
+    url: http://public-repo-1.hortonworks.com/ambari/ubuntu18/2.x/updates/2.7.3.0/ambari.list
+    dest: /etc/apt/sources.list.d/ambari.list
+
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    upgrade: yes
+    update_cache: yes
