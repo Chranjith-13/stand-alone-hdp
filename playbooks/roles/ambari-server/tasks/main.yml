@@ -16,37 +16,9 @@
     state: present
     update_cache: true
 
-
-- meta: flush_handlers
-
-
-- name: Install mysql-server
-  apt:
-    name: 'mysql-server'
-    update_cache: yes
-    state: present
-
-- name: Configure mysql to listen on all interfaces            
-  ini_file:
-    path: '/etc/mysql/mysql.conf.d/mysqld.cnf'
-    create: no
-    section: 'mysqld'
-    option: 'bind-address'
-    value: '*'
-    no_extra_spaces: yes
-    state: present
-
-- name: Copy file with owner and permissions
-  copy:
-    src: /etc/mysql/my.cnf
-    dest: /root/.my.cnf
-    owner: mysql
-    group: mysql
-    mode: '0644'
-
-- name: Configure the Ambari JDBC drive
-  shell: /usr/sbin/ambari-server setup --jdbc-db=mysql --jdbc-driver={{ mysql_jdbc_location }}
-  notify: Restart ambari-server
+#- name: Configure the Ambari JDBC drive
+#  shell: /usr/sbin/ambari-server setup --jdbc-db=mysql --jdbc-driver={{ mysql_jdbc_location }}
+#  notify: Restart ambari-server
 
 
 #- name: Set the Ambari Server Java setup option (OpenJDK)
@@ -66,25 +38,6 @@
 #    - { regexp: '^(jdk.*\.jcpol-url)=(.*)/ARTIFACTS/(.*)', line: '\g<1>={{ repo_base_url }}/ARTIFACTS/\g<3>' }
 #    - { regexp: '^(jdk.*\.url)=(.*)/ARTIFACTS/(.*)', line: '\g<1>={{ repo_base_url }}/ARTIFACTS/\g<3>' }
 #  when: java == 'embedded'
-
-- name: Load the Ambari Server schema (mysql)
-  mysql_db:
-    name: "{{ database_options.ambari_db_name }}"
-    login_host: "{{ database_options.external_hostname|default(ansible_fqdn,true) }}"
-    login_port: "{{ mysql_port }}"
-    login_user: "{{ database_options.ambari_db_username }}"
-    login_password: "{{ database_options.ambari_db_password }}"
-    state: import
-    target: /var/lib/ambari-server/resources/Ambari-DDL-MySQL-CREATE.sql
-  register: import_results
-
-
-- name: Set the Ambari Server database setup options
-  set_fact:
-    ambari_database_options: "--databasehost={{ database_options.external_hostname|default(ansible_fqdn,true) }} \
-                              --databasename={{ database_options.ambari_db_name }} \
-                              --databaseusername={{ database_options.ambari_db_username }} \
-                              --databasepassword={{ database_options.ambari_db_password }}"
   
 #- name: Run Ambari Server setup
 #  shell: /usr/sbin/ambari-server setup -s {{ ambari_java_options|default("") }} {{ ambari_database_options|default("") }}
@@ -95,10 +48,13 @@
 #  lineinfile:
 #    path: /etc/ambari-server/conf/ambari.properties
 #    state: present
+#
 #    line: 'server.startup.web.timeout=120'
 #  notify: Restart ambari-server
 
 #- meta: flush_handlers
+- name: server setup
+  command: ambari-server setup -s
 
 - name: Make sure the ambari-server service is started
   service:
