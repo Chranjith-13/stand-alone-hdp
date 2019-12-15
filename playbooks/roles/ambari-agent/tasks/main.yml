@@ -1,4 +1,17 @@
 ---
+
+- name: Create Ambari repo
+  command: wget http://public-repo-1.hortonworks.com/ambari/ubuntu18/2.x/updates/2.7.4.0/ambari.list -O /etc/apt/sources.list.d/ambari.list
+
+- name: Add Ambari key
+  apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: B9733A7A07513CAD
+
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    update_cache: yes
  
 - name: Install ambari-agent
   become: true
