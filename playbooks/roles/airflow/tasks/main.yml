@@ -1,0 +1,210 @@
+---
+# tasks file for airflow
+- name: Creating group "airflow"
+  group:
+    name: airflow
+    state: present
+
+- name: Add the user 'airflow' in the group 'airflow'
+  user:
+    name: airflow
+    group: airflow
+    home: /var/lib/airflow
+    move_home: yes
+    state: present
+    system: True
+
+- name: Install the 'Development tools' package group
+  apt:
+    name: build-essential
+    state: present
+
+- name: Ensure required packages are installed
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+    state: present
+
+- name: Ensure python-pip package is installed
+  apt:
+    name: python3-pip
+    update_cache: yes
+    state: present
+
+
+- name: Ensure python-requests package is removed
+  apt:
+    name: python-requests
+    update_cache: yes
+    state: absent
+
+
+- name: Install apache airflow package
+  command: pip3 install six==1.11.0
+  
+- name: Install apache airflow package
+  command: pip3 install apache-airflow 
+  
+- name: Install apache airflow packages
+  command: pip3 install "{{ item }}" 
+  with_items:
+    - apache-airflow[celery]
+    - apache-airflow[crypto]
+    - apache-airflow[hive]
+    - apache-airflow[hdfs]
+    - apache-airflow[password]
+    - apache-airflow[jdbc]
+    - apache-airflow[rabbitmq]
+  
+- name: Install flask package
+  command: pip3 install flask 
+  
+- name: Install flask_bcrypt package
+  command: pip3 install flask_bcrypt
+  
+- name: Install psycopg2 package
+  command: pip3 install psycopg2 
+  
+- name: Creating multiple folders for airflow config
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0760
+    group: airflow
+    owner: airflow
+  with_items:
+    - /var/lib/airflow/airflow
+    - /run/airflow
+
+- name: Creating airflow log folder
+  file:
+    path: /var/log/airflow
+    state: directory
+    mode: 0750
+    group: airflow
+    owner: root
+
+- name: Copy airflow.profile file to /etc/profile
+  copy:
+    src: airflow.profile
+    dest: /etc/profile.d/airflow.sh
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Copy service files to /etc/systemd/system
+  copy:
+    src: "{{ item }}"
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: '0644'
+  with_fileglob:
+    - "files/*.service"
+
+- name: Copy airflow.profile file to /etc/profile
+  copy:
+    src: airflow.profile
+    dest: /etc/profile.d/airflow.sh
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Copy airflow file to /etc/systemd/system
+  copy:
+    src: airflow
+    dest: /etc/sysconfig/
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Copy airflow.conf file to /etc/tmpfiles.d/
+  copy:
+    src: airflow.conf
+    dest: /etc/tmpfiles.d/
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Copy airflow.cfg file to /var/lib/airflow/
+  copy:
+    src: airflow.cfg
+    dest: /var/lib/airflow/
+    owner: root
+    group: airflow
+    mode: '0644'
+    force: no
+
+- name: Copy unittests.cfg file to /var/lib/airflow/
+  copy:
+    src: unittests.cfg
+    dest: /var/lib/airflow/
+    owner: root
+    group: airflow
+    mode: '0644'
+
+- name: Copy airflow.logrotate file to /etc/logrotate.d/
+  copy:
+    src: airflow.logrotate
+    dest: /etc/logrotate.d/
+    owner: root
+    group: root
+    mode: '0644'
+    force: no
+
+- name: Copy mkuser.py file to /tmp/
+  copy:
+    src: mkuser.py
+    dest: /tmp/
+    owner: root
+    group: airflow
+    mode: '0644'
+    force: no
+
+- name: Replace LOCALHOST in airflow.cfg
+  replace:
+    path: /var/lib/airflow/airflow.cfg
+    regexp: 'localhost'
+    replace: "{{ ansible_fqdn }}"
+
+- name: Initializing Airflow database
+  command: airflow initdb
+  become: yes
+  become_user: airflow
+  changed_when: false
+
+- name: Replace SequentialExecutor in airflow.cfg
+  replace:
+    path: /var/lib/airflow/airflow.cfg
+    regexp: 'executor = SequentialExecutor'
+    replace: executor = LocalExecutor
+
+- name: Replace SequentialExecutor in airflow.cfg
+  replace:
+    path: /var/lib/airflow/airflow.cfg
+    regexp: 'sql_alchemy_conn = sqlite:////var/lib/admin/airflow/airflow.db'
+    replace: sql_alchemy_conn = postgresql+psycopg2://airflow@dl00.icds.com:5432/airflow
+
+- name: Initializing Airflow database
+  command: airflow initdb
+  become: yes
+  become_user: airflow
+  changed_when: false
+
+- name: Start airflow services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - airflow-webserver
+    - airflow-worker
+    - airflow-scheduler
+
+- name: Run a remote python script to create admin username and password
+  command: python /tmp/mkuser.py
+  changed_when: false
+  become: yes
+  become_user: airflow
+  register: admin_password
+  ignore_errors: yes
+
+- name: Print admin password to login
+  debug: var=admin_password.stdout_lines

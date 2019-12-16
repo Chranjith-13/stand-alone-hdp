@@ -1,0 +1,99 @@
+---
+# file: roles/jupyter/tasks/main.yml
+
+- name: make sure necessary packages are installed
+  apt: name={{item}} state=present update_cache=yes
+  with_items: "{{jupyter_pkgs}}"
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: add jupyter group
+  group: name=jupyter state=present
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: add jupyter user
+  user: name=jupyter state=present groups=jupyter,shadow password="{{jupyterpw}}"
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: create jupyterhub folder in etc
+  file: path=/etc/jupyterhub state=directory mode=0755 owner=jupyter group=jupyter
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: copy jupyterhub sudospawner sudo config
+  copy: src=sudo_jupyter dest=/etc/sudoers.d/jupyter mode=0440 owner=root group=root
+  when: 
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: copy requirements file for jupyterhub
+  copy: src=requirements.txt dest=/root/jupyterhub_requirements.txt
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: install jupyter, jupyterhub, sudospawner via pip3
+  pip: executable=pip3 requirements="/root/jupyterhub_requirements.txt" extra_args='--upgrade'
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+
+- name: Install http-proxy
+  become: true
+  shell: "npm install -g configurable-http-proxy"
+
+
+- name: Check to see if config file exists
+  stat: path=/etc/jupyterhub/jupyterhub_config.py
+  register: config_exists
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: configure jupyterhub
+  command: /usr/local/bin/jupyterhub --generate-config chdir=/etc/jupyterhub/ creates=/etc/jupyterhub/jupyterhub_config.py
+  when: config_exists.stat.exists == False
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: set jupyterhub admin user
+  lineinfile: dest=/etc/jupyterhub/jupyterhub_config.py line="c.Authenticator.admin_users = {'jupyter'}"
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: set jupyterhub create users
+  lineinfile: dest=/etc/jupyterhub/jupyterhub_config.py line="c.LocalAuthenticator.create_system_users = True"
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: Check to see if config file exists
+  stat: path=/etc/init.d/jupyterhub
+  register: init_exists
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: install jupyterhub init script
+  copy: src=jupyter.init dest=/etc/init.d/jupyterhub mode=755 owner=root group=root
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+- name: start jupyterhub
+  service: name=jupyterhub enabled=yes state=started
+  become: yes
+  become_method: sudo
+  tags: jupyter
+
+

@@ -1,0 +1,54 @@
+---
+# mysql_root_password: admin
+# database_type: mysql
+ansible_become: true
+databases:
+  rman:
+    name: 'rman'
+    user: 'rman'
+    pass: 'RMANDB_PASSWORD'
+  nav:
+    name: 'nav'
+    user: 'nav'
+    pass: 'NAVDB_PASSWORD'
+  navms:
+    name: 'navms'
+    user: 'navms'
+    pass: 'NAVMSDB_PASSWORD'
+  metastore:
+    name: 'metastore'
+    user: 'hive'
+    pass: 'METASTOREDB_PASSWORD'
+  sentry:
+    name: 'sentry'
+    user: 'sentry'
+    pass: 'SENTRYDB_PASSWORD'
+  hue:
+    name: 'hue'
+    user: 'hue'
+    pass: 'HUEDB_PASSWORD'
+  oozie:
+    name: 'oozie'
+    user: 'oozie'
+    pass: 'OOZIEDB_PASSWORD'
+  scm:
+    name: 'scm'
+    user: 'scm'
+    pass: 'SCMDB_PASSWORD'
+  ReportsManager:
+    name: 'reportsmanager'
+    user: 'rm'
+    pass: 'REPORTSMANAGERDB_PASSWORD'
+  ActivityMonitor:
+    name: 'activitymonitor'
+    user: 'am'
+    pass: 'ACTIVITYMONITORDB_PASSWORD'
+db_postgres_encoding: 'UTF8'
+db_postgres_tablespace: 'pg_default'
+db_postgres_LC_COLLATE: 'en_US.UTF-8'
+db_postgres_LC_CTYPE: 'en_US.UTF-8'
+db_postgres_CONNECTION_LIMIT: '-1'
+db_user: dimagi
+db_name: dimagi_postgres
+db_password: dimagi@dmin!!p0st&ges
+

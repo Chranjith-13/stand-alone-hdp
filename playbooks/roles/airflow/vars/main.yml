@@ -1,0 +1,16 @@
+---
+# vars file for airflow
+ansible_become: true
+airflow_version: 1.10.6
+packages:
+  - zlib1g-dev
+  - bzip2
+  - libssl-dev
+  - libncurses5-dev
+  - libsqlite3-dev
+  - libpython-dev
+  - wget
+#  - cyrus-sasl2
+  - libffi-dev
+  - python3.6
+#  - python3.6-devel
