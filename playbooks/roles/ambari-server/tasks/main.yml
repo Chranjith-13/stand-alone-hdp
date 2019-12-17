@@ -4,7 +4,6 @@
   include_vars: "{{ item }}"
   with_first_found:
     - files:
-        - ubuntu-18.04.yml
         - defaults.yml
       paths:
         - ../ambari-server/vars
