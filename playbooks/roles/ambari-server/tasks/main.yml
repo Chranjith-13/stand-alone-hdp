@@ -16,42 +16,6 @@
     state: present
     update_cache: true
 
-#- name: Configure the Ambari JDBC drive
-#  shell: /usr/sbin/ambari-server setup --jdbc-db=mysql --jdbc-driver={{ mysql_jdbc_location }}
-#  notify: Restart ambari-server
-
-
-#- name: Set the Ambari Server Java setup option (OpenJDK)
-#  set_fact:
-#    ambari_java_options: "-j {{ openjdk_path }}"
-#  when: java == "openjdk"
-
-
-#- name: Update embedded java download url
-#  lineinfile:
-#    dest: /etc/ambari-server/conf/ambari.properties
-#    state: present
-#    regexp: "{{ item.regexp }}"
-#    line: "{{ item.line }}"
-#    backrefs: yes
-#  with_items:
-#    - { regexp: '^(jdk.*\.jcpol-url)=(.*)/ARTIFACTS/(.*)', line: '\g<1>={{ repo_base_url }}/ARTIFACTS/\g<3>' }
-#    - { regexp: '^(jdk.*\.url)=(.*)/ARTIFACTS/(.*)', line: '\g<1>={{ repo_base_url }}/ARTIFACTS/\g<3>' }
-#  when: java == 'embedded'
-  
-#- name: Run Ambari Server setup
-#  shell: /usr/sbin/ambari-server setup -s {{ ambari_java_options|default("") }} {{ ambari_database_options|default("") }}
-#  notify: Restart ambari-server
-
-
-#- name: Increase the Ambari Server startup timeout
-#  lineinfile:
-#    path: /etc/ambari-server/conf/ambari.properties
-#    state: present
-#
-#    line: 'server.startup.web.timeout=120'
-#  notify: Restart ambari-server
-
 #- meta: flush_handlers
 - name: server setup
   command: ambari-server setup -s
