@@ -15,9 +15,6 @@
     state: present
     update_cache: true
 
-- name: create symbolic link for mysql-connector-jar
-  shell: "cd /var/lib/ambari-server/resources/ && ln -s /usr/share/java/mysql-connector-java.jar mysql-connector-java.jar"
-
 
 - name: Install ambari-server
   become: true
@@ -40,4 +37,7 @@
     name: ambari-server
     enabled: yes
   ignore_errors: true
+
+- name: create symbolic link for mysql-connector-jar
+  shell: "cd /var/lib/ambari-server/resources/ && ln -s /usr/share/java/mysql-connector-java.jar mysql-connector-java.jar"
 
