@@ -15,10 +15,11 @@
   tags: jupyter
 
 - name: add jupyter user
-  user: name=jupyter state=present groups=jupyter,shadow password="{{jupyterpw}}"
-  become: yes
-  become_method: sudo
-  tags: jupyter
+  user:
+    name: jupyter
+    password: ju3rRnEiDAjq2
+    groups: jupyter
+
 
 - name: create jupyterhub folder in etc
   file: path=/etc/jupyterhub state=directory mode=0755 owner=jupyter group=jupyter
