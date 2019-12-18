@@ -7,6 +7,6 @@ db_postgres_tablespace: 'pg_default'
 db_postgres_LC_COLLATE: 'en_US.UTF-8'
 
 
-db_user: hive
-db_name: hive
-db_password: admin
+hive_db_user: hive
+hive_db_name: hive
+hive_db_password: admin
