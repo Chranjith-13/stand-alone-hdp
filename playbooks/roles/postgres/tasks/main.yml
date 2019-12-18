@@ -11,6 +11,8 @@
 
 - name: download repo file
   shell: sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
+
+- name: Add Key file
   shell: wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -
   
 - name: Update and upgrade apt packages
@@ -21,7 +23,7 @@
 - name: Install PostgreSQL
   apt: name={{ item }} state=latest
   with_items:
-    - postgresql
+    - postgresql-9.6
     - postgresql-contrib
     - libpq-dev
     - python-psycopg2
@@ -33,7 +35,7 @@
 - name: Make change in postgresql.conf file 
   template:
     src: pg_hba.conf.j2
-    dest: /etc/postgresql/10/main/pg_hba.conf
+    dest: /etc/postgresql/9.6/main/pg_hba.conf
     mode: 0644
     owner: postgres
     group: postgres 
@@ -65,3 +67,23 @@
   postgresql_user: name={{ db_user }}
                role_attr_flags=NOSUPERUSER,NOCREATEDB
                state=present
+
+
+- name: Create Hive Database
+  sudo_user: postgres
+  postgresql_db: name={{ hive_db_name }}
+             encoding='UTF-8'
+             lc_collate='en_US.UTF-8'
+             lc_ctype='en_US.UTF-8'
+             template='template0'
+             state=present
+
+- name: Ensure user has access to the database
+  sudo_user: postgres
+  postgresql_user: db={{ hive_db_name }}
+               name={{ hive_db_user }}
+               password={{ hive_db_password }}
+               encrypted=yes
+               priv=ALL
+               state=present
+
