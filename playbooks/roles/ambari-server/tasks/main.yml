@@ -15,6 +15,13 @@
     state: present
     update_cache: true
 
+- name: Install postgressql-connector-jar
+  become: true
+  apt:
+    name: libpostgresql-jdbc-java
+    state: present
+    update_cache: true
+
 
 - name: Install ambari-server
   become: true
@@ -26,6 +33,9 @@
 #- meta: flush_handlers
 - name: server setup
   command: ambari-server setup -s
+
+- name: configure postgres jbdc driver
+  command: ambari-server setup --jdbc-db=postgres --jdbc-driver=/usr/share/java/postgresql.jar
 
 - name: Make sure the ambari-server service is started
   service:

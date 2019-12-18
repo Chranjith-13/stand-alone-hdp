@@ -1,0 +1,17 @@
+---
+- import_playbook: "install_postgres.yml"
+  tags: postgres
+
+- import_playbook: "install_ambari.yml"
+  tags: ambari
+
+- import_playbook: "apply_blueprint.yml"
+  tags: blueprint
+
+
+- import_playbook: "install_jupyter.yml"
+  tags: jupyter
+
+
+- import_playbook: "install_airflow.yml"
+  tags: airflow
