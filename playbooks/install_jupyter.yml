@@ -3,4 +3,4 @@
   vars:
     nossl: True
   roles:
-    - jupyter-notebook
+    - jupyter-hub
