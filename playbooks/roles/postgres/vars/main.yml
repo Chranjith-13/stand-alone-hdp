@@ -10,3 +10,8 @@ db_postgres_LC_COLLATE: 'en_US.UTF-8'
 hive_db_user: hive
 hive_db_name: hive
 hive_db_password: admin
+
+airflow_db_user: airflow
+airflow_db_name: airflow
+airflow_db_password: admin
+

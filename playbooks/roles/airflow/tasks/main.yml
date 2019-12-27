@@ -179,11 +179,11 @@
     regexp: 'executor = SequentialExecutor'
     replace: executor = LocalExecutor
 
-- name: Replace SequentialExecutor in airflow.cfg
-  replace:
-    path: /var/lib/airflow/airflow.cfg
-    regexp: 'sql_alchemy_conn = sqlite:////var/lib/admin/airflow/airflow.db'
-    replace: sql_alchemy_conn = postgresql+psycopg2://airflow@dl00.icds.com:5432/airflow
+#- name: Replace SequentialExecutor in airflow.cfg
+#  replace:
+#    path: /var/lib/airflow/airflow.cfg
+#    regexp: 'sql_alchemy_conn = sqlite:////var/lib/admin/airflow/airflow.db'
+#    replace: sql_alchemy_conn = postgresql+psycopg2://airflow@dl00.icds.com:5432/airflow
 
 - name: Initializing Airflow database
   command: airflow initdb
