@@ -1,5 +1,5 @@
 [localhost]
-ec2-instance ansible_host=172.31.16.160 ansible_user=ubuntu ansible_ssh_private_key_file=/opt/ansible_scripts/stand-alone-cluster/Keyfiles/standalone-test.pem
+ec2-instance ansible_host=172.31.23.152 ansible_user=ubuntu ansible_ssh_private_key_file=/opt/ansible_scripts/stand-alone-cluster/Keyfiles/standalone-test.pem
 #[master-nodes]
 #ec2-instance ansible_host=172.31.6.3 ansible_user=ubuntu ansible_ssh_private_key_file=/opt/ansible_scripts/stand-alone-cluster/Keyfiles/standalone-test
 

@@ -1,0 +1,28 @@
+from airflow import DAG
+from airflow.operators.bash_operator import BashOperator
+from datetime import datetime, timedelta
+from string import ascii_lowercase
+
+default_args = {
+    'owner': '{{ airflow_user }}',
+    'depends_on_past': True,
+    'start_date': datetime(2018, 10, 1),
+    'email': ['{{ airflow_admin_email }}'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5)
+}
+
+dag = DAG(
+    'example_dag',
+    default_args=default_args,
+    description='Example of a simple, working DAG',
+    schedule_interval=timedelta(days=1)
+)
+
+bash_task = BashOperator(
+    task_id='bash_task',
+    bash_command='echo I am a valid message',
+    dag=dag,
+)

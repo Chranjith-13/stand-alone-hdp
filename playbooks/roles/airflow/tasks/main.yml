@@ -1,210 +1,278 @@
 ---
-# tasks file for airflow
-- name: Creating group "airflow"
+
+
+
+
+# https://docs.ansible.com/ansible/latest/modules/group_module.html
+- name:
+    "group : ensure airflow group exists"
   group:
-    name: airflow
-    state: present
+    name: "{{ airflow_group }}"
+  become:
+    true
 
-- name: Add the user 'airflow' in the group 'airflow'
+# https://docs.ansible.com/ansible/latest/modules/user_module.html
+- name:
+    "user : ensure airflow user exists"
   user:
-    name: airflow
-    group: airflow
-    home: /var/lib/airflow
-    move_home: yes
-    state: present
-    system: True
+    name: "{{ airflow_user }}"
+    group: "{{ airflow_group }}"
+    shell: "/bin/bash"
+  become:
+    true
 
-- name: Install the 'Development tools' package group
-  apt:
-    name: build-essential
-    state: present
-
-- name: Ensure required packages are installed
-  apt:
-    name: "{{ packages }}"
-    update_cache: yes
-    state: present
-
-- name: Ensure python-pip package is installed
-  apt:
-    name: python3-pip
-    update_cache: yes
-    state: present
-
-
-- name: Ensure python-requests package is removed
-  apt:
-    name: python-requests
-    update_cache: yes
-    state: absent
-
-
-- name: Install apache airflow package
-  command: pip3 install six==1.11.0
-  
-- name: Install apache airflow package
-  command: pip3 install apache-airflow 
-  
-- name: Install apache airflow packages
-  command: pip3 install "{{ item }}" 
-  with_items:
-    - apache-airflow[celery]
-    - apache-airflow[crypto]
-    - apache-airflow[hive]
-    - apache-airflow[hdfs]
-    - apache-airflow[password]
-    - apache-airflow[jdbc]
-    - apache-airflow[rabbitmq]
-  
-- name: Install flask package
-  command: pip3 install flask 
-  
-- name: Install flask_bcrypt package
-  command: pip3 install flask_bcrypt
-  
-- name: Install psycopg2 package
-  command: pip3 install psycopg2 
-  
-- name: Creating multiple folders for airflow config
+# https://docs.ansible.com/ansible/latest/modules/file_module.html
+- name:
+    "file : ensure airflow directories exist"
   file:
     path: "{{ item }}"
-    state: directory
-    mode: 0760
-    group: airflow
-    owner: airflow
+    state: "directory"
+    owner: "{{ airflow_user }}"
+    group: "{{ airflow_group }}"
   with_items:
-    - /var/lib/airflow/airflow
-    - /run/airflow
+    - "{{ airflow_dags_dir }}"
+    - "{{ airflow_example_dags_dir }}"
+    - "{{ airflow_home_dir }}"
+    - "{{ airflow_logs_dir }}"
+    - "{{ airflow_plugins_dir }}"
+  become:
+    true
 
-- name: Creating airflow log folder
+# https://docs.ansible.com/ansible/latest/modules/apt_module.html
+- name:
+    "apt : update"
+  apt:
+    update_cache: true
+  become:
+    true
+
+# https://docs.ansible.com/ansible/latest/modules/apt_module.html
+- name:
+    "apt : ensure python tools present"
+  apt:
+    pkg: "{{ item }}"
+    state: "present"
+  with_items:
+    - python3
+    - python3-pip
+  become:
+    true
+
+# https://docs.ansible.com/ansible/latest/modules/apt_module.html
+- name:
+    "apt : ensure POSIX.1e acl support installed"
+  apt:
+    # https://docs.ansible.com/ansible/latest/user_guide/become.html#becoming-an-unprivileged-user
+    pkg: "acl"
+    state: "present"
+  become:
+    true
+
+# https://docs.ansible.com/ansible/latest/modules/template_module.html
+- name:
+    "template : ensure DAG example present"
+  template:
+    src: "example_dag.py.j2"
+    dest: "{{ airflow_example_dags_dir }}/example_dag.py"
+    mode: 0644
+    owner: "{{ airflow_user }}"
+    group: "{{ airflow_group }}"
+  become:
+    true
+
+
+
+- name: Install psycopg2 package
+  command: pip3 install psycopg2 
+
+# AIRFLOW_GPL_UNIDECODE=yes is necessary starting with airflow 1.10.0
+# https://github.com/apache/incubator-airflow/blob/748ad939f1eef2060f3ad1c689812bb14ca944f6/UPDATING.md
+#
+# https://docs.ansible.com/ansible/latest/modules/pip_module.html
+- name:
+    "pip : ensure airflow present"
+  pip:
+    executable: "pip3"
+    name: "apache-airflow"
+    version: "{{ airflow_version }}"
+  environment:
+    AIRFLOW_GPL_UNIDECODE: "yes"
+  become:
+    true
+
+# https://docs.ansible.com/ansible/latest/modules/pip_module.html
+- name:
+    "pip : ensure extras present"
+  pip:
+    executable: "pip3"
+    name: "{{ item }}"
+    version: "{{ airflow_version }}"
+  with_items:
+    "{{ airflow_extra_packages }}"
+  become:
+    true
+  notify:
+    - "service : restart"
+
+
+##########
+#Configure
+##########
+
+
+# https://docs.ansible.com/ansible/latest/modules/lineinfile_module.html
+- name:
+    "lineinfile : ensure everyone uses main configuration"
+  lineinfile:
+    path: "/etc/environment"
+    line: "AIRFLOW_HOME={{ airflow_home_dir }}"
+  become:
+    true
+
+# https://docs.ansible.com/ansible/latest/modules/ini_file_module.html
+- name:
+    "ini_file : ensure configuration parameters present"
+  ini_file:
+    owner: "{{ airflow_user }}"
+    path: "{{ airflow_home_dir }}/airflow.cfg"
+    section: "{{ item.value['section'] | default('core') }}"
+    state: "{{ item.value['state'] | default('present') }}"
+    option: "{{ item.key }}"
+    value: "{{ item.value['value'] | default(omit) }}"
+  with_dict:
+    "{{ airflow_configuration_defaults | combine(airflow_configuration) }}"
+  become:
+    true
+  notify:
+    - "service : restart"
+
+# https://docs.ansible.com/ansible/latest/modules/command_module.html
+- name:
+    "command : initialize airflow database"
+  command:
+    "{{ airflow_executable }} initdb"
+  register:
+    "airflow_initdb_output"
+  changed_when:
+    "'Running upgrade' in airflow_initdb_output.stdout"
+  environment:
+    AIRFLOW_HOME: "{{ airflow_home_dir }}"
+  become:
+    true
+  become_user:
+    "{{ airflow_user }}"
+
+# https://docs.ansible.com/ansible/latest/modules/script_module.html
+- name:
+    "script : ensure adminitrator user present"
+  script: >
+    "create_user_if_not_exists.py"
+    "{{ airflow_admin_username }}"
+    "{{ airflow_admin_email }}"
+    "{{ airflow_admin_password }}"
+  environment:
+    AIRFLOW_HOME: "{{ airflow_home_dir }}"
+  register:
+    "create_user_output"
+  changed_when:
+    "'user created' in create_user_output.stdout"
+  become:
+    true
+  become_user:
+    "{{ airflow_user }}"
+
+# https://docs.ansible.com/ansible/latest/modules/template_module.html
+- name:
+    "template : ensure logrotate configuration present"
+  template:
+    src: "webserver-logrotate.j2"
+    dest: "/etc/logrotate.d/airflow"
+    mode: 0644
+  become:
+    true
+
+###########
+#Service
+###########
+# https://docs.ansible.com/ansible/latest/modules/file_module.html
+- name:
+    "file : ensure airflow pid directory exists"
   file:
-    path: /var/log/airflow
-    state: directory
-    mode: 0750
-    group: airflow
-    owner: root
+    path: "{{ airflow_pid_dir }}"
+    state: "directory"
+    owner: "{{ airflow_user }}"
+    group: "{{ airflow_group }}"
+  become:
+    true
 
-- name: Copy airflow.profile file to /etc/profile
-  copy:
-    src: airflow.profile
-    dest: /etc/profile.d/airflow.sh
-    owner: root
-    group: root
-    mode: '0644'
+# https://docs.ansible.com/ansible/latest/modules/file_module.html
+- name:
+    "file : ensure systemd environment directory exists"
+  file:
+    path: "{{ airflow_systemd_environment_dir }}"
+    state: "directory"
+    owner: "root"
+    group: "root"
+  become:
+    true
 
-- name: Copy service files to /etc/systemd/system
-  copy:
-    src: "{{ item }}"
-    dest: /etc/systemd/system/
-    owner: root
-    group: root
-    mode: '0644'
-  with_fileglob:
-    - "files/*.service"
+# https://docs.ansible.com/ansible/latest/modules/template_module.html
+- name:
+    "template : ensure systemd tmpfiles configuration present"
+  template:
+    src: "systemd-conf.j2"
+    dest: "{{ airflow_systemd_tmpfiles_dir }}/airflow.conf"
+    mode: 0644
+    owner: "{{ airflow_user }}"
+    group: "{{ airflow_group }}"
+  become:
+    true
 
-- name: Copy airflow.profile file to /etc/profile
-  copy:
-    src: airflow.profile
-    dest: /etc/profile.d/airflow.sh
-    owner: root
-    group: root
-    mode: '0644'
+# https://docs.ansible.com/ansible/latest/modules/template_module.html
+- name:
+    "template : ensure systemd environment file present"
+  template:
+    src: "systemd-env.j2"
+    dest: "{{ airflow_systemd_environment_dir }}/airflow"
+    mode: 0644
+    owner: "{{ airflow_user }}"
+    group: "{{ airflow_group }}"
+  become:
+    true
 
-- name: Copy airflow file to /etc/systemd/system
-  copy:
-    src: airflow
-    dest: /etc/sysconfig/
-    owner: root
-    group: root
-    mode: '0644'
+# https://docs.ansible.com/ansible/latest/modules/template_module.html
+- name:
+    "template : ensure service definitions present"
+  vars:
+    airflow_component_name: "{{ item.key }}"
+    airflow_component_privatetmp:
+      "{{ item.value['privatetmp'] | default(false) | string | lower }}"
+  template:
+    src: "systemd-service.j2"
+    dest: "{{ airflow_systemd_lib_dir }}/airflow-{{ item.key }}.service"
+    mode: 0644
+    owner: "root"
+    group: "root"
+  with_dict:
+    "{{ airflow_services }}"
+  become:
+    true
 
-- name: Copy airflow.conf file to /etc/tmpfiles.d/
-  copy:
-    src: airflow.conf
-    dest: /etc/tmpfiles.d/
-    owner: root
-    group: root
-    mode: '0644'
+# https://docs.ansible.com/ansible/latest/modules/systemd_module.html
+- name:
+    "systemd : daemon reload"
+  systemd:
+    daemon_reload: "yes"
+  become:
+    true
 
-- name: Copy airflow.cfg file to /var/lib/airflow/
-  copy:
-    src: airflow.cfg
-    dest: /var/lib/airflow/
-    owner: root
-    group: airflow
-    mode: '0644'
-    force: no
+# https://docs.ansible.com/ansible/latest/modules/service_module.html
+- service:
+    name: "airflow-{{ item.key }}"
+    state: "{{ item.value.state | default(started) }}"
+    enabled: "{{ item.value.enabled | default(yes) }}"
+  with_dict:
+    "{{ airflow_services }}"
+  become:
+    true
 
-- name: Copy unittests.cfg file to /var/lib/airflow/
-  copy:
-    src: unittests.cfg
-    dest: /var/lib/airflow/
-    owner: root
-    group: airflow
-    mode: '0644'
-
-- name: Copy airflow.logrotate file to /etc/logrotate.d/
-  copy:
-    src: airflow.logrotate
-    dest: /etc/logrotate.d/
-    owner: root
-    group: root
-    mode: '0644'
-    force: no
-
-- name: Copy mkuser.py file to /tmp/
-  copy:
-    src: mkuser.py
-    dest: /tmp/
-    owner: root
-    group: airflow
-    mode: '0644'
-    force: no
-
-- name: Replace LOCALHOST in airflow.cfg
-  replace:
-    path: /var/lib/airflow/airflow.cfg
-    regexp: 'localhost'
-    replace: "{{ ansible_fqdn }}"
-
-- name: Initializing Airflow database
-  command: airflow initdb
-  become: yes
-  become_user: airflow
-  changed_when: false
-
-- name: Replace SequentialExecutor in airflow.cfg
-  replace:
-    path: /var/lib/airflow/airflow.cfg
-    regexp: 'executor = SequentialExecutor'
-    replace: executor = LocalExecutor
-
-#- name: Replace SequentialExecutor in airflow.cfg
-#  replace:
-#    path: /var/lib/airflow/airflow.cfg
-#    regexp: 'sql_alchemy_conn = sqlite:////var/lib/admin/airflow/airflow.db'
-#    replace: sql_alchemy_conn = postgresql+psycopg2://airflow@dl00.icds.com:5432/airflow
-
-- name: Initializing Airflow database
-  command: airflow initdb
-  become: yes
-  become_user: airflow
-  changed_when: false
-
-- name: Start airflow services
-  service: name={{ item }} state=started enabled=yes
-  with_items:
-    - airflow-webserver
-    - airflow-worker
-    - airflow-scheduler
-
-- name: Run a remote python script to create admin username and password
-  command: python /tmp/mkuser.py
-  changed_when: false
-  become: yes
-  become_user: airflow
-  register: admin_password
-  ignore_errors: yes
-
-- name: Print admin password to login
-  debug: var=admin_password.stdout_lines

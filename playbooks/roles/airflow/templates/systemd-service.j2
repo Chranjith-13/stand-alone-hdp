@@ -1,0 +1,33 @@
+# Copyright (c) 2018-present eyeo GmbH
+#
+# This module is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+[Unit]
+Description=Airflow {{ airflow_component_name }} daemon
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+EnvironmentFile={{ airflow_systemd_environment_dir }}/airflow
+User={{ airflow_user }}
+Group={{ airflow_group }}
+Type=simple
+ExecStart={{ airflow_executable }} {{ airflow_component_name }} --pid {{ airflow_pid_dir }}/{{ airflow_component_name }}.pid
+Restart=always
+RestartSec=5s
+# https://www.freedesktop.org/software/systemd/man/systemd.exec.html
+PrivateTmp={{ airflow_component_privatetmp }}
+
+[Install]
+WantedBy=multi-user.target

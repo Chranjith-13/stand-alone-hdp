@@ -1,309 +1,212 @@
 ---
-## General
-airflow_version: 1.9.0
-# Available extra packages: https://airflow.apache.org/installation.html#extra-packages
-# List should follow Ansible's YAML basics: https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html#yaml-basics
-airflow_extra_packages: []
 
-airflow_pip_executable: "pip"
+# General
+# Location of the `airflow` executable introduced by installing an Airflow
+# package.
 airflow_executable: "/usr/local/bin/airflow"
 
-airflow_required_libs:
-  - python-pip
-  - acl
+# Extra Airflow python packages to install.
+airflow_extra_packages:
+  - "apache-airflow[crypto]"
+  - "apache-airflow[password]"
 
-airflow_required_python_packages: []
-  # Version is not mandatory
-  # - {name: pyasn1, version: 0.4.4}
+# User group which Airflow will execute under.
+airflow_group: "airflow"
 
-# Owner
-airflow_user: airflow
-airflow_group: airflow
+# User under which Airflow operates.
+airflow_user: "airflow"
 
-## Service options
-airflow_scheduler_runs: 5
+# Version of package to install.
+airflow_version: "1.10.7"
 
+# Directory where DAGs are stored
+airflow_dags_dir: "/usr/local/src/airflow/dags"
+
+# Directory where example DAGs are stored
+airflow_example_dags_dir: "{{ airflow_dags_dir }}/examples"
+
+# Directory where the main configuration files live.
+airflow_home_dir: "/etc/airflow"
+
+# Directory for log storage.
+airflow_logs_dir: "/var/log/airflow"
+
+# Location of Airflow plugins.
+airflow_plugins_dir: "/usr/local/src/airflow/plugins"
+
+# Systemd
+
+# Directory for the PID file
+airflow_pid_dir: "/run/airflow"
+
+# Directory where the environment configuration for SystemD processes should be
+# stored
+airflow_systemd_environment_dir: "/etc/sysconfig"
+
+# Directory where SystemD services definitions should be stored
+airflow_systemd_lib_dir: "/lib/systemd/system"
+
+# Directory where the tmpfiles configuration should be put to
+airflow_systemd_tmpfiles_dir: "/etc/tmpfiles.d"
+
+# Admin user
+airflow_admin_username: admin
+airflow_admin_email: admin@example.com
+airflow_admin_password: dimagi
+
+# Systemd services to configure
 airflow_services:
-  airflow-webserver:
+  scheduler:
     enabled: yes
-    state: started
-  airflow-scheduler:
+    state: "started"
+  webserver:
     enabled: yes
-    state: started
-  airflow-worker:
-    enabled: no
-    state: started
-  airflow-flower:
-    enabled: no
-    state: started
+    state: "started"
+    privatetmp: true
 
-# Files & Paths
-airflow_home: /etc/airflow
-airflow_dags_folder: "{{ airflow_home }}/dags"
-airflow_logs_folder: /var/log/airflow
-airflow_child_process_log_folder: "{{ airflow_logs_folder }}/scheduler"
-airflow_pidfile_folder: "/run/airflow"
-airflow_environment_file_folder: /etc/sysconfig
-airflow_environment_extra_vars: []
-  # - name: PATH
-  #   value: "/custom/path/bin:$PATH"
+# Dictionary of configuration options set in `airflow.cfg`
+# Role user should set own parameters in `airflow_configuration` dictionary
+airflow_configuration: {}
 
-# Allowing playbooks to provide external config files&templates
-airflow_extra_conf_path: "{{ playbook_dir }}/files/airflow"
-airflow_extra_conf_template_path: "{{ playbook_dir }}/templates/airflow"
-airflow_config_template_path: airflow.cfg.j2
+airflow_configuration_defaults:
 
-# AIRFLOW CONFIGURATION
-# ---------------------
-airflow_logging_level: "INFO"
-airflow_fab_logging_level: "WARN"
+  # [core]
 
-airflow_logging_config_class:
+  # Airflow configuration directory
+  airflow_home:
+    value: "{{ airflow_home_dir }}"
+  # Directory in which DAGs are read from.
+  dags_folder:
+    value: "{{ airflow_dags_dir }}"
+  # The folder where airflow should store its log files
+  # This path must be absolute
+  base_log_folder:
+    value: "{{ airflow_logs_dir }}"
+  # The executor class that airflow should use. Choices include 
+  # `SequentialExecutor`, `LocalExecutor`, `CeleryExecutor`, `DaskExecutor`.
+  executor:
+    value: "SequentialExecutor"
+  # The SQL Alchemy url used to connect to Airflow's internal database.
+  # See: https://www.sqlalchemy.org/
+  sql_alchemy_conn:
+    value: "postgresql+psycopg2://airflow@localhost:5432/airflow"
+  # Defines the max number of task instances that should run simultaneously.
+  parallelism:
+    value: "32"
+  # The number of task instances allowed to run concurrently by the scheduler.
+  dag_concurrency:
+    value: "16"
+  # Are DAGs paused by default at creation.
+  dags_are_paused_at_creation:
+    value: "True"
+  # The maximum number of active DAG runs per DAG.
+  max_active_runs_per_dag:
+    value: "16"
+  # Whether to load the examples that ship with Airflow. It's good to
+  # get started, but you probably want to set this to False in a production
+  # environment
+  load_examples: # we want this always
+    value: "False"
+  # Location of Airflow plugins.
+  plugins_folder:
+    value: "{{ airflow_plugins_dir }}"
+  # This is a default development value - please change it!
+  fernet_key:
+    value: "O8bUUAJGHGXXItwgd6ghtt8CLgcGESYAzz3UuegR2i8="
+  # If set, tasks without a `run_as_user` argument will be run with this user.
+  default_impersonation:
+    value: "airflow"
+  # Disables _not secure_ features (e.g. AdHoc charts);
+  # Features enabled by this setting:
+  # https://github.com/apache/incubator-airflow/blob/4dd4c8280629927d645576daeee1253ecff69ff6/airflow/www/app.py#L86
+  secure_mode:
+    value: "False"
+  # Turn unit test mode on (overwrites many configuration options with test
+  # values at runtime)
+  unit_test_mode:
+    value: "False"
 
-airflow_log_format: "[%%(asctime)s] {{ '{' }}%%(filename)s:%%(lineno)d} %%(levelname)s - %%(message)s"
-airflow_simple_log_format: "%%(asctime)s %%(levelname)s - %%(message)s"
+  # [webserver]
 
-airflow_log_filename_template: "{{ '{{' }} ti.dag_id {{ '}}' }}/{{ '{{' }} ti.task_id {{ '}}' }}/{{ '{{' }} ts {{ '}}' }}/{{ '{{' }} try_number {{ '}}' }}.log"
-airflow_log_processor_filename_template: "{{ '{{' }} filename {{ '}}' }}.log"
+  # The base url of your website as airflow cannot guess what domain or
+  # cname is used.
+  base_url:
+    value: "http://localhost:18080"
+    section: "webserver"
+  # The ip specified when starting the web server
+  web_server_host:
+    value: "0.0.0.0"
+    section: "webserver"
+  # The port on which to run the web server
+  web_server_port:
+    value: "18080"
+    section: "webserver"
+  # Log files for the gunicorn webserver. '-' means log to stderr
+  access_logfile:
+    value: "{{ airflow_logs_dir }}/gunicorn-access.log"
+    section: "webserver"
+  error_logfile:
+    value: "{{ airflow_logs_dir }}/gunicorn-error.log"
+    section: "webserver"
+  # Expose the configuration file in the web server
+  expose_config:
+    value: "False"
+    section: "webserver"
+  # Set to true to turn on password authentication:
+  # https://airflow.incubator.apache.org/security.html#web-authentication
+  authenticate:
+    value: "True"
+    section: "webserver"
+  auth_backend:
+    value: "airflow.contrib.auth.backends.password_auth"
+    section: "webserver"
+  # Filter the list of dags by owner name (requires authentication to be
+  # enabled)
+  filter_by_owner:
+    value: "False"
+    section: "webserver"
+  # Puts the webserver in demonstration mode; blurs the names of Operators for
+  # privacy.
+  demo_mode:
+    value: "False" # we always want this
+    section: "webserver"
+  # By default, the webserver shows paused DAGs. Flip this to hide paused
+  # DAGs by default
+  hide_paused_dags_by_default:
+    value: "False"
+    section: "webserver"
 
-airflow_hostname_callable: "socket:getfqdn"
+  # [scheduler]
 
-airflow_default_timezone: "utc"
+  # How often airflow reads through DAG directory in search for DAG updates.
+  dag_dir_list_interval:
+    value: "300"
+    section: "scheduler"
+  # Directory for logs coming from children processes actually performing task
+  # execution.
+  child_process_log_directory:
+    value: "{{ airflow_logs_dir }}/scheduler"
+    section: "scheduler"
 
-airflow_task_log_reader: "task"
-airflow_enable_xcom_pickling: "True"
-airflow_killed_task_cleanup_time: 60
-airflow_dag_run_conf_overrides_params: "False"
+  # [admin]
 
-airflow_load_examples: True
+  # UI to hide sensitive variable fields when set to True
+  hide_sensitive_variable_fields:
+    value: "True"
+    section: "admin"
 
-# The executor class that airflow should use. Choices include
-# SequentialExecutor, LocalExecutor, CeleryExecutor, DaskExecutor
-airflow_executor: SequentialExecutor
+  # smtp
 
-airflow_parallelism: 32
-airflow_dag_concurrency: 16
-airflow_dags_are_paused_at_creation: True
-airflow_non_pooled_task_slot_count: 128
-airflow_max_active_runs_per_dag: 16
-
-airflow_fernet_key:
-
-airflow_donot_pickle: False
-airflow_dagbag_import_timeout: 30
-
-airflow_task_runner: BashTaskRunner
-
-airflow_default_impersonation:
-airflow_unit_test_mode: False
-
-airflow_plugins_folder: "{{ airflow_home }}/plugins"
-
-## REMOTE LOGS
-airflow_remote_base_log_folder:
-airflow_remote_log_conn_id:
-airflow_encrypt_s3_logs: False
-airflow_s3_log_folder: # DEPRECATED
-
-## DB
-airflow_database_conn: sqlite:///{{ airflow_home }}/airflow.db
-airflow_database_pool_size: 5
-airflow_database_pool_recycle: 2000
-
-## CLI
-airflow_cli_api_client: airflow.api.client.local_client
-airflow_cli_api_endpoint_url: http://localhost:8080
-
-## API
-airflow_auth_backend: airflow.api.auth.backend.default
-
-## LINEAGE
-airflow_lineage_backend:
-
-## ATLAS
-airflow_atlas_sasl_enabled: "False"
-airflow_atlas_host:
-airflow_atlas_port: 21000
-airflow_atlas_username:
-airflow_atlas_password:
-
-## OPERATORS
-airflow_operator_default_owner: Airflow
-airflow_operator_default_cpus: 1
-airflow_operator_default_ram: 512
-airflow_operator_default_disk: 512
-airflow_operator_default_gpus: 0
-
-## HIVE
-airflow_default_hive_mapred_queue:
-
-## WEBSERVER
-airflow_webserver_base_url: http://localhost:8080
-airflow_webserver_host: 0.0.0.0
-airflow_webserver_port: 8080
-airflow_webserver_workers: 4
-airflow_webserver_worker_timeout: 120
-airflow_webserver_ssl_cert:
-airflow_webserver_ssl_key:
-airflow_webserver_master_timeout: 120
-airflow_webserver_worker_refresh_batch_size: 1
-airflow_webserver_worker_refresh_interval: 30
-airflow_webserver_secret_key: temporary_key
-airflow_webserver_worker_class: sync
-airflow_webserver_expose_config: False
-airflow_webserver_filter_by_owner: False
-airflow_webserver_owner_mode: user
-airflow_webserver_dag_orientation: LR
-airflow_webserver_demo_mode: False
-airflow_webserver_log_fetch_timeout_sec: 5
-airflow_webserver_hide_paused_dags_by_default: False
-airflow_webserver_page_size: 100
-airflow_webserver_rbac: "False"
-airflow_webserver_navbar_color: "#007A87"
-airflow_webserver_default_dag_run_display_number: 25
-
-## Webserver Authentication (http://pythonhosted.org/airflow/security.html#web-authentication)
-
-# Choices of auth_backend include:
-# - airflow.contrib.auth.backends.password_auth
-# - airflow.contrib.auth.backends.ldap_auth
-# - airflow.contrib.auth.backends.github_enterprise_auth
-# - others? :)
-airflow_webserver_authenticate: False
-airflow_webserver_auth_backend:
-
-## LDAP (only applies if airflow_webserver_auth_backend == "airflow.contrib.auth.backends.ldap_auth")
-# Bear in mind that, starting with Airflow 1.10.0, PyPi package pyasn1 v0.4.4 is needed
-airflow_ldap_uri:
-airflow_ldap_user_filter:
-airflow_ldap_user_name_attr:
-airflow_ldap_superuser_filter:
-airflow_ldap_data_profiler_filter:
-airflow_ldap_bind_user:
-airflow_ldap_bind_password:
-airflow_ldap_basedn:
-airflow_ldap_cacert:
-airflow_ldap_search_scope:
-
-## MAIL
-airflow_email_backend: airflow.utils.email.send_email_smtp
-
-## SMTP
-airflow_smtp_host: localhost
-airflow_smtp_starttls: True
-airflow_smtp_ssl: False
-airflow_smtp_port: 25
-airflow_smtp_mail_from: airflow@airflow.com
-airflow_smtp_user:
-airflow_smtp_passwd:
-
-## DASK
-airflow_dask_cluster_address: 127.0.0.1:8786
-airflow_dask_tls_ca:
-airflow_dask_tls_cert:
-airflow_dask_tls_key:
-
-## SCHEDULER
-airflow_scheduler_job_heartbeat_sec: 5
-airflow_scheduler_heartbeat_sec: 5
-airflow_scheduler_run_duration: -1
-airflow_scheduler_min_file_process_interval: 0
-airflow_scheduler_min_file_parsing_loop_time: 1
-airflow_scheduler_dag_dir_list_interval: 300
-airflow_scheduler_print_stats_interval: 30
-airflow_scheduler_zombie_task_threshold: 300
-airflow_scheduler_catchup_by_default: True
-airflow_scheduler_max_threads: 2
-airflow_scheduler_authenticate: False
-airflow_scheduler_max_tis_per_query: 512
-
-## STASTD
-airflow_statsd_on: False
-airflow_statsd_host: localhost
-airflow_statsd_port: 8125
-airflow_statsd_prefix: airflow
-
-## CELERY
-airflow_celery_app_name: airflow.executors.celery_executor
-airflow_celery_concurrency: 16
-airflow_celery_worker_log_server_port: 8793
-airflow_celery_broker_url: sqla+mysql://airflow:airflow@localhost:3306/airflow
-airflow_celery_result_backend: db+mysql://airflow:airflow@localhost:3306/airflow
-airflow_celery_default_queue: default
-airflow_celery_ssl_active: "False"
-airflow_celery_ssl_key:
-airflow_celery_ssl_cert:
-airflow_celery_ssl_cacert:
-
-celery_extra_packages: # DICT
-
-celery_version: 3.1.17 # This Celery version is guaranteed to work with Airflow 1.8.x
-
-## FLOWER
-airflow_flower_host: 0.0.0.0
-airflow_flower_port: 5555
-
-## MESOS
-airflow_mesos_master_host: localhost:5050
-airflow_mesos_framework_name: Airflow
-airflow_mesos_task_cpu: 1
-airflow_mesos_task_memory: 256
-airflow_mesos_checkpoint: False
-airflow_mesos_authenticate: False
-
-## KERBEROS
-airflow_kerberos_ccache: /tmp/airflow_krb5_ccache
-airflow_kerberos_principal: airflow
-airflow_kerberos_reinit_frequency: 3600
-airflow_kerberos_kinit_path: kinit
-airflow_kerberos_keytab: airflow.keytab
-
-# GITHUB ENTEPRISE
-airflow_github_enterprise_api_rev: v3
-
-## ADMIN
-airflow_admin_hide_sensitive_variable_fields: True
-airflow_admin_variables: []
-  # - key: bucket_name
-  #   value: logs_foo
-airflow_admin_connections: []
-  # - conn_id: gcp_conn
-  #   conn_type: google_cloud_platform
-  #   conn_extra: '{"extra__google_cloud_platform__scope": "https://www.googleapis.com/auth/cloud-platform", "extra__google_cloud_platform__project": "myprojet", "extra__google_cloud_platform__key_path": ""}'
-  # - conn_id: pg_conn
-  #   conn_uri: postgres://user:passwordh@host:5432/dbname
-
-## ELASTICSEARCH
-airflow_elasticsearch_host:
-airflow_elasticsearch_log_id_template: "{dag_id}-{task_id}-{execution_date}-{try_number}"
-airflow_elasticsearch_end_of_log_mark: "end_of_log"
-
-## KUBERNETES
-airflow_kubernetes_worker_container_repository:
-airflow_kubernetes_worker_container_tag:
-airflow_kubernetes_delete_worker_pods: "True"
-airflow_kubernetes_namespace: "default"
-airflow_kubernetes_airflow_configmap:
-airflow_kubernetes_dags_volume_subpath:
-airflow_kubernetes_dags_volume_claim:
-airflow_kubernetes_logs_volume_subpath:
-airflow_kubernetes_logs_volume_claim:
-airflow_kubernetes_git_repo:
-airflow_kubernetes_git_branch:
-airflow_kubernetes_git_user:
-airflow_kubernetes_git_password:
-airflow_kubernetes_git_subpath:
-airflow_kubernetes_git_sync_container_repository: "gcr.io/google-containers/git-sync-amd64"
-airflow_kubernetes_git_sync_container_tag: "v2.0.5"
-airflow_kubernetes_git_sync_init_container_name: "git-sync-clone"
-airflow_kubernetes_worker_service_account_name:
-airflow_kubernetes_image_pull_secrets:
-airflow_kubernetes_gcp_service_account_keys:
-airflow_kubernetes_in_cluster: "True"
-
-## DAGs
-# Python dependencies needed by the DAGs. This variable is expected to be a
-# list of items following the structure provided in the example comment
-dags_dependencies:
-  # - {name: pip_package, version: version_needed}
+  # Hostname of the SMTP server
+  smtp_host:
+    value: "localhost"
+    section: "smtp"
+  # Toggle using starttls in communication with SMTP server
+  smtp_starttls:
+    value: "False"
+    section: "smtp"
+  # Email address which shows as the sender of the emails
+  smtp_mail_from:
+    value: "airflow@example.com"
+    section: "smtp"
 
